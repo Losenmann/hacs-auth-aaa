@@ -37,6 +37,7 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
    ```
 > [!IMPORTANT]
 > {} - is replaced by the username
+
 2. In the `configuration.yaml` file add the configuration, the authentication order matters
    ```yaml
    homeassistant:
