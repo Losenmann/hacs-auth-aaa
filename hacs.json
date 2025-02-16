@@ -1,0 +1,7 @@
+{
+    "name": "Auth AAA",
+    "homeassistant": "2024.1.6",
+    "hide_default_branch": false,
+    "content_in_root": false,
+    "zip_release": false
+  }  
