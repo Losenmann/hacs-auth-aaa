@@ -10,15 +10,17 @@ Python script for Home Assistant adding authentication via RADIUS or LDAP\
 The project is based on the library [pyrad](https://github.com/pyradius/pyrad.git)
 
 ## Overview
-The script is designed to authenticate users in Home Assistant via a RADIUS or LDAP. This allows you to centrally manage user access.<br>
-The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mode) and [CLI](#usage-in-cli-mode).
+The script is designed to authenticate users in Home Assistant via a RADIUS or LDAP.\
+This allows you to centrally manage user access.\
+The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mode) and [CLI](#usage-in-cli-mode).\
+Additional information about the mode [auth_providers](https://www.home-assistant.io/docs/authentication/providers/#command-line)
 
 ## Install
 [![](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=losenmann&repository=hacs-auth-aaa&category=python_script)
 
 - **Method 1.** [HACS](https://hacs.xyz) > Python Script > Add > Auth AAA > Install
 
-- **Method 2.** Copy the manually  `auth-aaa.py` from [latest release](https://github.com/losenmann/iptv-toolkit/releases/latest/download/auth-aaa.py) to path `/config/python_scripts`
+- **Method 2.** Copy the manually  `auth-aaa.py` from [latest release](https://github.com/losenmann/iptv-toolkit/releases/latest/download/auth-aaa.py) to path `/config/python_scripts`:
     ```sh
     wget -LP /config/python_scripts "https://github.com/losenmann/iptv-toolkit/releases/latest/download/auth-aaa.py"`
     ```
@@ -26,7 +28,7 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
 ## Usage in auth_provider mode
 ### Setupe
 #### **Home Assistant**
-1. Set connection parameters in the `secrets.yaml` file. Example data
+1. Set connection parameters in the `secrets.yaml` file. Example data:
    ```yaml
    auth_aaa_server: "server.example.com"
    auth_aaa_radius_secret: "homeassistant"
@@ -36,9 +38,9 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
    auth_aaa_ldap_attrib: ["givenName","memberof"]
    ```
 > [!IMPORTANT]
-> {} - is replaced by the username
+> {} - is replaced by the username.
 
-2. In the `configuration.yaml` file add the configuration, the authentication order matters
+2. In the `configuration.yaml` file add the configuration, the authentication order matters:
    ```yaml
    homeassistant:
      auth_providers:
@@ -49,11 +51,12 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
        - type: homeassistant
    ```
 > [!NOTE]
-> The `meta: true` directive is responsible for writing some variables to standard output to populate the user account created in Home Assistant with additional data. Removing the directive will disable authorization in Home Assistant using the script.
+> The `meta: true` directive is responsible for writing some variables to standard output to populate the user account created in Home Assistant with additional data. Removing the directive will disable authorization in Home Assistant using the script.\
+> The script supports running as an executable file for this you need to set execution rights. By default, HACS removes permission data.
 
 #### **IF USED RADIUS**
-   1. Add data from the file [dictionary](./dictionary) to the RADIUS server's `dictionary` file
-   2. Set the user's `Hass-Group` attribute to `system-users`
+   1. Add data from the file [dictionary](./dictionary) to the RADIUS server's `dictionary` file.
+   2. Set the user's `Hass-Group` attribute to `system-users`:
 
       | Attribute | Type | Value | Description |
       | :-- | :--: | :-----: | :---------- |
@@ -64,12 +67,12 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
 > For correct operation RADIUS Authorization , you must add to the [dictionary](./dictionary) in the RADIUS server dictionary file.
 <details><summary>For owners device MikroTik</summary>
 
-   1. Install `user-manager` package
+   1. Install `user-manager` package:
       ```rsc
       /tool/fetch mode=https url=("https://download.mikrotik.com/routeros/".[/system/routerboard/get upgrade-firmware]."/user-manager-".[/system/routerboard/get upgrade-firmware]."-".[/system/resource/get architecture-name].".npk") output=file
       /system/reboot
        ```
-   2. Setup a `user-manager`
+   2. Setup a `user-manager`:
       ```rsc
       /user-manager/attribute/add name="Hass-Group" vendor-id=812300 type-id=1 value-type=string
       /user-manager/attribute/add name="Hass-Local-Only" vendor-id=812300 type-id=2 value-type=hex
@@ -81,8 +84,11 @@ The script supports 2 launch modes: [auth_providers](#usage-in-auth_provider-mod
 </details>
 
 #### **IF USED LDAP**
+> [!CAUTION]
+> Authentication method via ldap in development.
 
-The LDAP server must support the `memberof` module. There should be an entry in the configuration: `olcModuleload: memberof.so`. In Alpine Linux, the module can be installed like this: `apk add openldap-overlay-memberof`
+The LDAP server must support the `memberof` module. There should be an entry in the configuration: `olcModuleload: memberof.so`.\
+In Alpine Linux, the module can be installed like this: `apk add openldap-overlay-memberof`.
 
 The structure of the LDAP tree should look like this:
 ```
@@ -94,20 +100,20 @@ Users can be added to a parent group:
 ```
 cn=homeassistant,dc=example,dc=com
 ```
-In this case, members of the parent group will have rights `system-users`
+In this case, members of the parent group will have rights `system-users`.
 
 Prospective users must have the following attributes:
 - uid
 - givenName
 - memberof
 
-If the `givenName` attribute is missing, then the login will be used as the username
+If the `givenName` attribute is missing, then the login will be used as the username.
 
 ## Usage in CLI mode
-In CLI mode, you need to set execution permissions `chmod +x ./python_scripts/auth-aaa.py`<br>
-Or run via Python `python ./python_scripts/auth-aaa.py`
+In CLI mode, you need to set execution permissions `chmod +x ./python_scripts/auth-aaa.py`.\
+Or run via Python `python ./python_scripts/auth-aaa.py`.
 > [!NOTE]
-> RADIUS connection parameters can be configured in `secrets.yaml`, see point 1 of the chapter [Usage in auth_provider mode](#usage-in-auth_provider-mode)
+> RADIUS connection parameters can be configured in `secrets.yaml`, see point 1 of the chapter [Usage in auth_provider mode](#usage-in-auth_provider-mode).
 ```
 ./python_scripts/auth-aaa.py -U 'username' -P 'password' -S 'server.example.com' -s 'secret'
 ```

@@ -3,19 +3,21 @@ from ipaddress import IPv4Address, IPv6Address
 from ipaddress import IPv4Network, IPv6Network
 from collections import OrderedDict
 from copy import copy
+import os
+import sys
 import struct
 import binascii
 import base64
-import os
-import sys
 import logging
-import yaml
 import argparse
 import hashlib
 import select
 import socket
 import time
 import hmac
+import yaml
+import json
+import subprocess
 try:
     import secrets
     random_generator = secrets.SystemRandom()
@@ -38,7 +40,7 @@ except ImportError:
 
 CONST_VENDOR = 812300
 data_req = [None] * 9
-data_resp = [None] * 4
+data_resp = [None] * 5
 dictionary = "dictionary_radius"
 
 parser = argparse.ArgumentParser(
@@ -57,6 +59,13 @@ parser.add_argument('-b', '--basedn', type=str, help='BASE DN (only LDAP)')
 parser.add_argument('-f', '--filter', type=str, help='FILTER (only LDAP)')
 parser.add_argument('-a', '--attrib', action='append', help='get an array of attributes (only LDAP)')
 args = parser.parse_args()
+
+if args.type == "LDAP":
+    try:
+        from ldap3 import Server, Connection, core, ALL
+    except ImportError:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', 'ldap3'])
+        from ldap3 import Server, Connection, core, ALL
 
 """LoggingCustomFormatter"""
 class LoggingCustomFormatter(logging.Formatter):
@@ -120,6 +129,8 @@ def main():
             logger.warning("RADIUS Server secret not specified")
             sys.exit(1)
     else:
+        logger.error("Authentication method via ldap in development")
+        sys.exit(1)
         try:
             data_req[4] = args.userdn if args.userdn else secret['auth_aaa_ldap_userdn']
         except:
@@ -135,17 +146,22 @@ def main():
         except:
             logger.warning("LDAP filter not specified")
             sys.exit(1)
+        try:
+            data_req[7] = args.attrib if args.attrib else secret['auth_aaa_ldap_attrib']
+        except:
+            logger.warning("LDAP attributes not specified")
+            sys.exit(1)
 
     if args.type == "RADIUS":
         data_resp = Auth().radius(data_req)
 
     if data_resp[0] is True:
-        if data_resp[1] in ['system-admin', 'system-users']:
+        if data_resp[2] in ['system-admin', 'system-users']:
             if args.meta:
-                print("name=" + data_req[0])
-                print("group=" + data_resp[1])
-                print("local_only=" + data_resp[2])
-                print("is_activ=" + data_resp[3])
+                print("name=" + data_resp[1])
+                print("group=" + data_resp[2])
+                print("local_only=" + str(data_resp[3]).lower())
+                print("is_activ=" + str(data_resp[4]).lower())
             else:
                 logger.info("Access accepted")
             exit(0)
@@ -174,30 +190,31 @@ class Auth(object):
             if not args.meta:
                 logger.info("Sending authentication request")
             reply = srv.SendPacket(req)
-        except Timeout:
+        except Timeout as error:
             if not args.meta:
-                logger.error("RADIUS server does not reply")
+                logger.error(error)
             sys.exit(1)
         except socket.error as error:
             if not args.meta:
-                logger.error("Network error: " + error[1])
+                logger.error(error[1])
             sys.exit(1)
 
+        data_resp[1] = data_req[0]
         match reply.code:
             case 2:
                 data_resp[0] = True
                 try:
-                    data_resp[1] = reply[(CONST_VENDOR, 1)][0].decode("utf-8")
+                    data_resp[2] = reply[(CONST_VENDOR, 1)][0].decode("utf-8")
                 except:
-                    data_resp[1] = None
+                    data_resp[2] = None
                 try:
-                    data_resp[2] = str(bool(int(reply[(CONST_VENDOR, 2)][0].hex(), 16))).lower()
+                    data_resp[3] = str(bool(int(reply[(CONST_VENDOR, 2)][0].hex(), 16))).lower()
                 except:
-                    data_resp[2] = False
+                    data_resp[3] = False
                 try:
-                    data_resp[3] = str(bool(int(reply[(CONST_VENDOR, 3)][0].hex(), 16))).lower()
+                    data_resp[4] = str(bool(int(reply[(CONST_VENDOR, 3)][0].hex(), 16))).lower()
                 except:
-                    data_resp[3] = True
+                    data_resp[4] = True
                 return data_resp
             case 3:
                 data_resp[0] = False
@@ -205,6 +222,39 @@ class Auth(object):
             case _:
                 data_resp[0] = False
                 return data_resp
+
+    def ldap(self, data_req):
+        srv = Server(data_req[2], get_info=ALL)
+        try:
+            if not args.meta:
+                logger.info("Sending authentication request")
+            conn = Connection(srv, data_req[4], password=data_req[1], auto_bind=True)
+            if conn.search(data_req[5], data_req[6], attributes=data_req[7]):
+
+                """ Get user """
+                data_resp[0] = conn.response[0].get('attributes', {}).get('givenName', '')[0] if conn.response[0].get('attributes', {}).get('givenName', '')[0] else data_req[0]
+
+                """ Get user group """
+                if len(conn.response[0].get('attributes', {}).get('memberof', '')) > 0:
+                    for i in conn.response[0].get('attributes', {}).get('memberof', ''):
+                        if i.find('cn=homeassistant') >= 0:
+                            match i.split(",")[0].replace("cn=",""):
+                                case ["homeassistant", "system-users"]:
+                                    data_resp[2] = "system-users"
+                                case "system-admin":
+                                    data_resp[2] = "system-admin"
+                                    break
+                                case _:
+                                    data_resp[2] = "system-users"
+                else:
+                    data_resp[2] = None
+                    return data_resp
+            else:
+                data_resp[0] = False
+                return data_resp
+        except core.exceptions.LDAPBindError as error:
+            logger.error(error)
+            sys.exit(1)
 
 """bidict.py"""
 class BiDict(object):
