@@ -41,8 +41,8 @@ except ImportError:
 CONST_VENDOR = 812300
 data_req = [None] * 9
 data_resp = [None] * 5
-dictionary = "../.storage/dictionary_radius"
-secrets = "../secrets.yaml"
+dictionary = "/config/.storage/dictionary_radius"
+secrets = "/config/secrets.yaml"
 
 parser = argparse.ArgumentParser(
         prog='Auth AAA',
