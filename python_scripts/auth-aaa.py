@@ -41,7 +41,8 @@ except ImportError:
 CONST_VENDOR = 812300
 data_req = [None] * 9
 data_resp = [None] * 5
-dictionary = "dictionary_radius"
+dictionary = "../.storage/dictionary_radius"
+secrets = "../secrets.yaml"
 
 parser = argparse.ArgumentParser(
         prog='Auth AAA',
@@ -105,7 +106,7 @@ def main():
         f.write(base64.b64decode(DictFileBase64()).decode("utf-8"))
         f.close()
 
-    with open("./secrets.yaml") as fh:
+    with open(secrets) as fh:
         secret = yaml.load(fh, Loader=yaml.FullLoader)
     try:
         data_req[0] = args.username if args.username else os.environ['username']
