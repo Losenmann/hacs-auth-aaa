@@ -3,7 +3,7 @@
 
 VENDOR		Home-Assistant		812300
 BEGIN-VENDOR	Home-Assistant
-ATTRIBUTE	HA-Group		1	string
-ATTRIBUTE	HA-Local-Only		2	byte
-ATTRIBUTE	HA-Is-Active		3	byte
+ATTRIBUTE	Home-Assistant-Group        1	string
+ATTRIBUTE	Home-Assistant-Local-Only   2	byte
+ATTRIBUTE	Home-Assistant-Is-Active    3	byte
 END-VENDOR	Home-Assistant
