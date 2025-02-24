@@ -39,10 +39,11 @@ except ImportError:
     md5_constructor = md5.new
 
 CONST_VENDOR = 812300
+dirname = os.path.dirname(os.path.realpath(__file__))
 data_req = [None] * 9
 data_resp = [None] * 5
-dictionary = "/config/.storage/auth-aaa.dictionary"
-secrets = "/config/secrets.yaml"
+dictionary = dirname + "/../.storage/auth-aaa.dictionary"
+secrets = dirname + "/../secrets.yaml"
 
 parser = argparse.ArgumentParser(
         prog='Auth AAA',
